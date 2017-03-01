@@ -33,16 +33,16 @@ struct Ray {
 enum Refl_t { DIFF, SPEC, REFR }; // material types, used in radiance()
 struct Sphere {
   double radius;
-  Vec p; // position
+  Vec position; // position
   Vec e; // emission
   Vec c; // color
   Refl_t refl; // reflection type (DIFFuse, SPECular, REFRactive)
 
-  Sphere(double radius_, Vec p_, Vec e_, Vec c_, Refl_t refl_)
-      : radius(radius_), p(p_), e(e_), c(c_), refl(refl_) {}
+  Sphere(double radius_, Vec position_, Vec e_, Vec c_, Refl_t refl_)
+      : radius(radius_), position(position_), e(e_), c(c_), refl(refl_) {}
 
   double intersect(const Ray &r) const { // returns distance, 0 if nohit
-    Vec op = p - r.o; // Solve t^2*d.d + 2*t*(o-p).d + (o-p).(o-p)-R^2 = 0
+    Vec op = position - r.o; // Solve t^2*d.d + 2*t*(o-position).d + (o-position).(o-position)-R^2 = 0
     double t;
     double eps = 1e-4;
     double b = op.dot(r.d);
@@ -90,7 +90,7 @@ Vec radiance(const Ray &r, int depth, unsigned short *Xi) {
   if (!intersect(r, t, id))
     return {};                     // if miss, return black
   const Sphere &obj = spheres[id]; // the hit object
-  Vec x = r.o + r.d * t, n = (x - obj.p).norm(),
+  Vec x = r.o + r.d * t, n = (x - obj.position).norm(),
       nl = n.dot(r.d) < 0 ? n : n * -1, f = obj.c;
   double p = f.x > f.y && f.x > f.z ? f.x : f.y > f.z ? f.y : f.z; // max refl
   if (++depth > 5) {
