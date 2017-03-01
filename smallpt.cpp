@@ -1,3 +1,5 @@
+#include <array>
+
 #include <math.h>   // smallpt, a Path Tracer by Kevin Beason, 2008
 #include <stdlib.h> // Make : g++ -O3 -fopenmp smallpt.cpp -o smallpt
 #include <stdio.h>  //        Remove "-fopenmp" for g++ version < 4.2
@@ -55,7 +57,7 @@ struct Sphere {
   }
 };
 
-Sphere spheres[] = {
+std::array<Sphere, 9> spheres = {{
     // Scene: radius, position, emission, color, material
     {1e5, {1e5 + 1, 40.8, 81.6}, {}, {.75, .25, .25}, Refl::DIFF},   // Left
     {1e5, {-1e5 + 99, 40.8, 81.6}, {}, {.25, .25, .75}, Refl::DIFF}, // Rght
@@ -66,9 +68,12 @@ Sphere spheres[] = {
     {16.5, {27, 16.5, 47}, {}, Vec{1, 1, 1} * .999, Refl::SPEC},     // Mirr
     {16.5, {73, 16.5, 78}, {}, Vec{1, 1, 1} * .999, Refl::REFR},     // Glas
     {600, {50, 681.6 - .27, 81.6}, {12, 12, 12}, {}, Refl::DIFF}     // Lite
-};
+}};
+
 inline double clamp(double x) { return x < 0 ? 0 : x > 1 ? 1 : x; }
-inline int toInt(double x) { return int(pow(clamp(x), 1 / 2.2) * 255 + .5); }
+inline int toInt(double x) {
+  return static_cast<int>(pow(clamp(x), 1 / 2.2) * 255 + .5);
+}
 inline bool intersect(const Ray &r, double &t, int &id) {
   double n = sizeof(spheres) / sizeof(Sphere), d, inf = t = 1e20;
   for (int i = int(n); i--;)
