@@ -37,10 +37,6 @@ struct Sphere {
   Vec color;
   Refl refl; // reflection type (DIFFuse, SPECular, REFRactive)
 
-  Sphere(double radius_, Vec position_, Vec emission_, Vec color_, Refl refl_)
-      : radius(radius_), position(position_), emission(emission_),
-        color(color_), refl(refl_) {}
-
   double intersect(const Ray &r) const { // returns distance, 0 if nohit
     Vec op = position - r.o;             // Solve t^2*d.d + 2*t*(o-position).d +
                                          // (o-position).(o-position)-R^2 = 0
@@ -58,21 +54,18 @@ struct Sphere {
     return (t = b - det) > eps ? t : ((t = b + det) > eps ? t : 0);
   }
 };
+
 Sphere spheres[] = {
     // Scene: radius, position, emission, color, material
-    Sphere(1e5, {1e5 + 1, 40.8, 81.6}, {}, {.75, .25, .25},
-           Refl::DIFF), // Left
-    Sphere(1e5, {-1e5 + 99, 40.8, 81.6}, {}, {.25, .25, .75},
-           Refl::DIFF),                                            // Rght
-    Sphere(1e5, {50, 40.8, 1e5}, {}, {.75, .75, .75}, Refl::DIFF), // Back
-    Sphere(1e5, {50, 40.8, -1e5 + 170}, {}, {}, Refl::DIFF),       // Frnt
-    Sphere(1e5, {50, 1e5, 81.6}, {}, {.75, .75, .75}, Refl::DIFF), // Botm
-    Sphere(1e5, {50, -1e5 + 81.6, 81.6}, {}, {.75, .75, .75},
-           Refl::DIFF),                                                // Top
-    Sphere(16.5, {27, 16.5, 47}, {}, Vec{1, 1, 1} * .999, Refl::SPEC), // Mirr
-    Sphere(16.5, {73, 16.5, 78}, {}, Vec{1, 1, 1} * .999, Refl::REFR), // Glas
-    Sphere(600, {50, 681.6 - .27, 81.6}, {12, 12, 12}, {},
-           Refl::DIFF) // Lite
+    {1e5, {1e5 + 1, 40.8, 81.6}, {}, {.75, .25, .25}, Refl::DIFF},   // Left
+    {1e5, {-1e5 + 99, 40.8, 81.6}, {}, {.25, .25, .75}, Refl::DIFF}, // Rght
+    {1e5, {50, 40.8, 1e5}, {}, {.75, .75, .75}, Refl::DIFF},         // Back
+    {1e5, {50, 40.8, -1e5 + 170}, {}, {}, Refl::DIFF},               // Frnt
+    {1e5, {50, 1e5, 81.6}, {}, {.75, .75, .75}, Refl::DIFF},         // Botm
+    {1e5, {50, -1e5 + 81.6, 81.6}, {}, {.75, .75, .75}, Refl::DIFF}, // Top
+    {16.5, {27, 16.5, 47}, {}, Vec{1, 1, 1} * .999, Refl::SPEC},     // Mirr
+    {16.5, {73, 16.5, 78}, {}, Vec{1, 1, 1} * .999, Refl::REFR},     // Glas
+    {600, {50, 681.6 - .27, 81.6}, {12, 12, 12}, {}, Refl::DIFF}     // Lite
 };
 inline double clamp(double x) { return x < 0 ? 0 : x > 1 ? 1 : x; }
 inline int toInt(double x) { return int(pow(clamp(x), 1 / 2.2) * 255 + .5); }
