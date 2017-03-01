@@ -5,9 +5,9 @@
 // Usage: time ./smallpt 5000 && xv image.ppm
 
 struct Vec {        
-  double x = 0.;
-  double y = 0.;
-  double z = 0.; // position, also color (r,g,b)
+  double x = 0.; // position, also color (r)
+  double y = 0.; // position, also color (g)
+  double z = 0.; // position, also color (b)
 
   Vec operator+(const Vec &b) const { return {x + b.x, y + b.y, z + b.z}; }
   Vec operator-(const Vec &b) const { return {x - b.x, y - b.y, z - b.z}; }
@@ -32,18 +32,28 @@ struct Ray {
 
 enum Refl_t { DIFF, SPEC, REFR }; // material types, used in radiance()
 struct Sphere {
-  double rad;  // radius
-  Vec p, e, c; // position, emission, color
+  double radius;
+  Vec p; // position
+  Vec e; // emission
+  Vec c; // color
   Refl_t refl; // reflection type (DIFFuse, SPECular, REFRactive)
-  Sphere(double rad_, Vec p_, Vec e_, Vec c_, Refl_t refl_)
-      : rad(rad_), p(p_), e(e_), c(c_), refl(refl_) {}
+
+  Sphere(double radius_, Vec p_, Vec e_, Vec c_, Refl_t refl_)
+      : radius(radius_), p(p_), e(e_), c(c_), refl(refl_) {}
+
   double intersect(const Ray &r) const { // returns distance, 0 if nohit
     Vec op = p - r.o; // Solve t^2*d.d + 2*t*(o-p).d + (o-p).(o-p)-R^2 = 0
-    double t, eps = 1e-4, b = op.dot(r.d), det = b * b - op.dot(op) + rad * rad;
-    if (det < 0)
+    double t;
+    double eps = 1e-4;
+    double b = op.dot(r.d);
+    double det = b * b - op.dot(op) + radius * radius;
+
+    if (det < 0) {
       return 0;
-    else
+    } else {
       det = sqrt(det);
+    }
+
     return (t = b - det) > eps ? t : ((t = b + det) > eps ? t : 0);
   }
 };
