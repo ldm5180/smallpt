@@ -162,8 +162,8 @@ Vec radiance(const Ray &r, int depth, unsigned short *Xi) {
                           radiance({x, tdir}, depth, Xi) * Tr);
 }
 int main(int argc, char *argv[]) {
-  int width = 1024;
-  int height = 768;
+  constexpr int width = 1024;
+  constexpr int height = 768;
   int samples = argc == 2 ? atoi(argv[1]) / 4 : 1;        // # samples
   Ray camera{{50, 52, 295.6}, Vec{0, -0.042612, -1}.norm()}; // camera pos, dir
   Vec cx = Vec{width * .5135 / height};
