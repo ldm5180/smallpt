@@ -1,5 +1,5 @@
 #include <array>
-
+#include <tuple>
 #include <math.h>   // smallpt, a Path Tracer by Kevin Beason, 2008
 #include <stdlib.h> // Make : g++ -O3 -fopenmp smallpt.cpp -o smallpt
 #include <stdio.h>  //        Remove "-fopenmp" for g++ version < 4.2
@@ -71,24 +71,33 @@ std::array<Sphere, 9> spheres = {{
 }};
 
 inline double clamp(double x) { return x < 0 ? 0 : x > 1 ? 1 : x; }
+
 inline int toInt(double x) {
   return static_cast<int>(pow(clamp(x), 1 / 2.2) * 255 + .5);
 }
-inline bool intersect(const Ray &r, double &t, int &id) {
-  double n = sizeof(spheres) / sizeof(Sphere), d, inf = t = 1e20;
-  for (int i = int(n); i--;)
-    if ((d = spheres[i].intersect(r)) && d < t) {
+
+inline std::pair<bool, Sphere*> intersect(const Ray &r, double &t) {
+  double d;
+  double inf = t = 1e20;
+  Sphere *id;
+  for (auto &s : spheres) {
+    if ((d = s.intersect(r)) && d < t) {
       t = d;
-      id = i;
+      id = &s;
     }
-  return t < inf;
+  }
+  return std::make_pair(t < inf, id);
 }
+
 Vec radiance(const Ray &r, int depth, unsigned short *Xi) {
   double t;   // distance to intersection
-  int id = 0; // id of intersected object
-  if (!intersect(r, t, id))
-    return {};                     // if miss, return black
-  const Sphere &obj = spheres[id]; // the hit object
+  Sphere* id; // id of intersected object
+  bool intersected;
+  std::tie(intersected, id) = intersect(r, t);
+  if (!intersected) {
+    return {}; // if miss, return black
+  }
+  const Sphere &obj = *id; // the hit object
   Vec x = r.o + r.d * t, n = (x - obj.position).norm(),
       nl = n.dot(r.d) < 0 ? n : n * -1, f = obj.color;
   double p = f.x > f.y && f.x > f.z ? f.x : f.y > f.z ? f.y : f.z; // max refl
