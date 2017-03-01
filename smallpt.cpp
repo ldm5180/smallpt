@@ -162,34 +162,41 @@ Vec radiance(const Ray &r, int depth, unsigned short *Xi) {
                           radiance({x, tdir}, depth, Xi) * Tr);
 }
 int main(int argc, char *argv[]) {
-  int w = 1024, h = 768, samps = argc == 2 ? atoi(argv[1]) / 4 : 1; // # samples
-  Ray cam{{50, 52, 295.6}, Vec{0, -0.042612, -1}.norm()}; // cam pos, dir
-  Vec cx = Vec{w * .5135 / h}, cy = (cx % cam.d).norm() * .5135, r;
-  std::vector<Vec> c(w * h);
+  int width = 1024;
+  int height = 768;
+  int samples = argc == 2 ? atoi(argv[1]) / 4 : 1;        // # samples
+  Ray camera{{50, 52, 295.6}, Vec{0, -0.042612, -1}.norm()}; // camera pos, dir
+  Vec cx = Vec{width * .5135 / height};
+  Vec cy = (cx % camera.d).norm() * .5135;
+  Vec r;
+  std::vector<Vec> c(width * height);
+
 #pragma omp parallel for schedule(dynamic, 1) private(r) // OpenMP
-  for (int y = 0; y < h; y++) {                          // Loop over image rows
-    fprintf(stderr, "\rRendering (%d spp) %5.2f%%", samps * 4,
-            100. * y / (h - 1));
+
+  for (int y = 0; y < height; y++) { // Loop over image rows
+    fprintf(stderr, "\rRendering (%d spp) %5.2f%%", samples * 4,
+            100. * y / (height - 1));
     for (unsigned short x = 0,
                         Xi[3] = {0, 0, static_cast<unsigned short>(y * y * y)};
-         x < w; x++) // Loop cols
-      for (int sy = 0, i = (h - y - 1) * w + x; sy < 2;
+         x < width; x++) // Loop cols
+      for (int sy = 0, i = (height - y - 1) * width + x; sy < 2;
            sy++)                                    // 2x2 subpixel rows
         for (int sx = 0; sx < 2; sx++, r = Vec()) { // 2x2 subpixel cols
-          for (int s = 0; s < samps; s++) {
+          for (int s = 0; s < samples; s++) {
             double r1 = 2 * erand48(Xi),
                    dx = r1 < 1 ? sqrt(r1) - 1 : 1 - sqrt(2 - r1);
             double r2 = 2 * erand48(Xi),
                    dy = r2 < 1 ? sqrt(r2) - 1 : 1 - sqrt(2 - r2);
-            Vec d = cx * (((sx + .5 + dx) / 2 + x) / w - .5) +
-                    cy * (((sy + .5 + dy) / 2 + y) / h - .5) + cam.d;
-            r = r + radiance({cam.o + d * 140, d.norm()}, 0, Xi) * (1. / samps);
+            Vec d = cx * (((sx + .5 + dx) / 2 + x) / width - .5) +
+                    cy * (((sy + .5 + dy) / 2 + y) / height - .5) + camera.d;
+            r = r +
+                radiance({camera.o + d * 140, d.norm()}, 0, Xi) * (1. / samples);
           } // Camera rays are pushed ^^^^^ forward to start in interior
           c[i] = c[i] + Vec{clamp(r.x), clamp(r.y), clamp(r.z)} * .25;
         }
   }
   FILE *f = fopen("image.ppm", "w"); // Write image to PPM file.
-  fprintf(f, "P3\n%d %d\n%d\n", w, h, 255);
+  fprintf(f, "P3\n%d %d\n%d\n", width, height, 255);
   for (const auto &vec : c) {
     fprintf(f, "%d %d %d ", toInt(vec.x), toInt(vec.y), toInt(vec.z));
   }
