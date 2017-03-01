@@ -126,8 +126,9 @@ int main(int argc, char *argv[]) {
   for (int y = 0; y < h; y++) {                          // Loop over image rows
     fprintf(stderr, "\rRendering (%d spp) %5.2f%%", samps * 4,
             100. * y / (h - 1));
-    for (unsigned short x = 0, Xi[3] = {0, 0, y * y * y}; x < w;
-         x++) // Loop cols
+    for (unsigned short x = 0,
+                        Xi[3] = {0, 0, static_cast<unsigned short>(y * y * y)};
+         x < w; x++) // Loop cols
       for (int sy = 0, i = (h - y - 1) * w + x; sy < 2;
            sy++)                                    // 2x2 subpixel rows
         for (int sx = 0; sx < 2; sx++, r = Vec()) { // 2x2 subpixel cols
