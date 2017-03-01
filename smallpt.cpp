@@ -4,7 +4,7 @@
 
 // Usage: time ./smallpt 5000 && xv image.ppm
 
-struct Vec {        
+struct Vec {
   double x = 0.; // position, also color (r)
   double y = 0.; // position, also color (g)
   double z = 0.; // position, also color (b)
@@ -15,9 +15,7 @@ struct Vec {
   Vec mult(const Vec &b) const { return {x * b.x, y * b.y, z * b.z}; }
   Vec &norm() { return *this = *this * (1 / sqrt(x * x + y * y + z * z)); }
 
-  double dot(const Vec &b) const {
-    return x * b.x + y * b.y + z * b.z;
-  }
+  double dot(const Vec &b) const { return x * b.x + y * b.y + z * b.z; }
 
   // cross:
   Vec operator%(Vec &b) const {
@@ -33,16 +31,18 @@ struct Ray {
 enum Refl_t { DIFF, SPEC, REFR }; // material types, used in radiance()
 struct Sphere {
   double radius;
-  Vec position; // position
-  Vec e; // emission
-  Vec c; // color
-  Refl_t refl; // reflection type (DIFFuse, SPECular, REFRactive)
+  Vec position; 
+  Vec emission;  
+  Vec c;        // color
+  Refl_t refl;  // reflection type (DIFFuse, SPECular, REFRactive)
 
-  Sphere(double radius_, Vec position_, Vec e_, Vec c_, Refl_t refl_)
-      : radius(radius_), position(position_), e(e_), c(c_), refl(refl_) {}
+  Sphere(double radius_, Vec position_, Vec emission_, Vec c_, Refl_t refl_)
+      : radius(radius_), position(position_), emission(emission_), c(c_),
+        refl(refl_) {}
 
   double intersect(const Ray &r) const { // returns distance, 0 if nohit
-    Vec op = position - r.o; // Solve t^2*d.d + 2*t*(o-position).d + (o-position).(o-position)-R^2 = 0
+    Vec op = position - r.o;             // Solve t^2*d.d + 2*t*(o-position).d +
+                                         // (o-position).(o-position)-R^2 = 0
     double t;
     double eps = 1e-4;
     double b = op.dot(r.d);
@@ -67,7 +67,7 @@ Sphere spheres[] = {
     Sphere(1e5, {50, 40.8, -1e5 + 170}, {}, {}, DIFF),       // Frnt
     Sphere(1e5, {50, 1e5, 81.6}, {}, {.75, .75, .75}, DIFF), // Botm
     Sphere(1e5, {50, -1e5 + 81.6, 81.6}, {}, {.75, .75, .75},
-           DIFF),                                             // Top
+           DIFF),                                                // Top
     Sphere(16.5, {27, 16.5, 47}, {}, Vec{1, 1, 1} * .999, SPEC), // Mirr
     Sphere(16.5, {73, 16.5, 78}, {}, Vec{1, 1, 1} * .999, REFR), // Glas
     Sphere(600, {50, 681.6 - .27, 81.6}, {12, 12, 12}, {},
@@ -97,7 +97,7 @@ Vec radiance(const Ray &r, int depth, unsigned short *Xi) {
     if (erand48(Xi) < p) {
       f = f * (1 / p);
     } else {
-      return obj.e;       // R.R.
+      return obj.emission; // R.R.
     }
   }
   if (obj.refl == DIFF) { // Ideal DIFFUSE reflection
@@ -105,24 +105,24 @@ Vec radiance(const Ray &r, int depth, unsigned short *Xi) {
     Vec w = nl, u = ((fabs(w.x) > .1 ? Vec{0, 1} : Vec{1}) % w).norm(),
         v = w % u;
     Vec d = (u * cos(r1) * r2s + v * sin(r1) * r2s + w * sqrt(1 - r2)).norm();
-    return obj.e + f.mult(radiance({x, d}, depth, Xi));
+    return obj.emission + f.mult(radiance({x, d}, depth, Xi));
   } else if (obj.refl == SPEC) // Ideal SPECULAR reflection
-    return obj.e +
-        f.mult(radiance(Ray{x, r.d - n * 2 * n.dot(r.d)}, depth, Xi));
+    return obj.emission +
+           f.mult(radiance(Ray{x, r.d - n * 2 * n.dot(r.d)}, depth, Xi));
   Ray reflRay = {x, r.d - n * 2 * n.dot(r.d)}; // Ideal dielectric REFRACTION
-  bool into = n.dot(nl) > 0;                // Ray from outside going in?
+  bool into = n.dot(nl) > 0;                   // Ray from outside going in?
   double nc = 1, nt = 1.5, nnt = into ? nc / nt : nt / nc, ddn = r.d.dot(nl),
          cos2t;
   if ((cos2t = 1 - nnt * nnt * (1 - ddn * ddn)) <
       0) // Total internal reflection
-    return obj.e + f.mult(radiance(reflRay, depth, Xi));
+    return obj.emission + f.mult(radiance(reflRay, depth, Xi));
   Vec tdir =
       (r.d * nnt - n * ((into ? 1 : -1) * (ddn * nnt + sqrt(cos2t)))).norm();
   double a = nt - nc, b = nt + nc, R0 = a * a / (b * b),
          c = 1 - (into ? -ddn : tdir.dot(n));
   double Re = R0 + (1 - R0) * c * c * c * c * c, Tr = 1 - Re, P = .25 + .5 * Re,
          RP = Re / P, TP = Tr / (1 - P);
-  return obj.e +
+  return obj.emission +
          f.mult(depth > 2
                     ? (erand48(Xi) < P ? // Russian roulette
                            radiance(reflRay, depth, Xi) * RP
