@@ -97,10 +97,14 @@ Vec radiance(const Ray &r, int depth, unsigned short *Xi) {
   if (!intersected) {
     return {}; // if miss, return black
   }
+
   const Sphere &obj = *id; // the hit object
-  Vec x = r.o + r.d * t, n = (x - obj.position).norm(),
-      nl = n.dot(r.d) < 0 ? n : n * -1, f = obj.color;
+  Vec x = r.o + r.d * t;
+  Vec n = (x - obj.position).norm();
+  Vec nl = n.dot(r.d) < 0 ? n : n * -1;
+  Vec f = obj.color;
   double p = f.x > f.y && f.x > f.z ? f.x : f.y > f.z ? f.y : f.z; // max refl
+
   if (++depth > 5) {
     if (erand48(Xi) < p) {
       f = f * (1 / p);
@@ -108,15 +112,20 @@ Vec radiance(const Ray &r, int depth, unsigned short *Xi) {
       return obj.emission; // R.R.
     }
   }
+
   if (obj.refl == Refl::DIFF) { // Ideal DIFFUSE reflection
-    double r1 = 2 * M_PI * erand48(Xi), r2 = erand48(Xi), r2s = sqrt(r2);
-    Vec w = nl, u = ((fabs(w.x) > .1 ? Vec{0, 1} : Vec{1}) % w).norm(),
-        v = w % u;
+    double r1 = 2 * M_PI * erand48(Xi);
+    double r2 = erand48(Xi);
+    double r2s = sqrt(r2);
+    Vec w = nl;
+    Vec u = ((fabs(w.x) > .1 ? Vec{0, 1} : Vec{1}) % w).norm();
+    Vec v = w % u;
     Vec d = (u * cos(r1) * r2s + v * sin(r1) * r2s + w * sqrt(1 - r2)).norm();
     return obj.emission + f.mult(radiance({x, d}, depth, Xi));
-  } else if (obj.refl == Refl::SPEC) // Ideal SPECULAR reflection
+  } else if (obj.refl == Refl::SPEC) { // Ideal SPECULAR reflection
     return obj.emission +
-           f.mult(radiance(Ray{x, r.d - n * 2 * n.dot(r.d)}, depth, Xi));
+           f.mult(radiance({x, r.d - n * 2 * n.dot(r.d)}, depth, Xi));
+  }
   Ray reflRay = {x, r.d - n * 2 * n.dot(r.d)}; // Ideal dielectric REFRACTION
   bool into = n.dot(nl) > 0;                   // Ray from outside going in?
   double nc = 1, nt = 1.5, nnt = into ? nc / nt : nt / nc, ddn = r.d.dot(nl),
