@@ -28,17 +28,18 @@ struct Ray {
   Vec d;
 };
 
-enum Refl_t { DIFF, SPEC, REFR }; // material types, used in radiance()
+enum class Refl { DIFF, SPEC, REFR }; // material types, used in radiance()
+
 struct Sphere {
   double radius;
-  Vec position; 
-  Vec emission;  
-  Vec c;        // color
-  Refl_t refl;  // reflection type (DIFFuse, SPECular, REFRactive)
+  Vec position;
+  Vec emission;
+  Vec color;
+  Refl refl; // reflection type (DIFFuse, SPECular, REFRactive)
 
-  Sphere(double radius_, Vec position_, Vec emission_, Vec c_, Refl_t refl_)
-      : radius(radius_), position(position_), emission(emission_), c(c_),
-        refl(refl_) {}
+  Sphere(double radius_, Vec position_, Vec emission_, Vec color_, Refl refl_)
+      : radius(radius_), position(position_), emission(emission_),
+        color(color_), refl(refl_) {}
 
   double intersect(const Ray &r) const { // returns distance, 0 if nohit
     Vec op = position - r.o;             // Solve t^2*d.d + 2*t*(o-position).d +
@@ -60,18 +61,18 @@ struct Sphere {
 Sphere spheres[] = {
     // Scene: radius, position, emission, color, material
     Sphere(1e5, {1e5 + 1, 40.8, 81.6}, {}, {.75, .25, .25},
-           DIFF), // Left
+           Refl::DIFF), // Left
     Sphere(1e5, {-1e5 + 99, 40.8, 81.6}, {}, {.25, .25, .75},
-           DIFF),                                            // Rght
-    Sphere(1e5, {50, 40.8, 1e5}, {}, {.75, .75, .75}, DIFF), // Back
-    Sphere(1e5, {50, 40.8, -1e5 + 170}, {}, {}, DIFF),       // Frnt
-    Sphere(1e5, {50, 1e5, 81.6}, {}, {.75, .75, .75}, DIFF), // Botm
+           Refl::DIFF),                                            // Rght
+    Sphere(1e5, {50, 40.8, 1e5}, {}, {.75, .75, .75}, Refl::DIFF), // Back
+    Sphere(1e5, {50, 40.8, -1e5 + 170}, {}, {}, Refl::DIFF),       // Frnt
+    Sphere(1e5, {50, 1e5, 81.6}, {}, {.75, .75, .75}, Refl::DIFF), // Botm
     Sphere(1e5, {50, -1e5 + 81.6, 81.6}, {}, {.75, .75, .75},
-           DIFF),                                                // Top
-    Sphere(16.5, {27, 16.5, 47}, {}, Vec{1, 1, 1} * .999, SPEC), // Mirr
-    Sphere(16.5, {73, 16.5, 78}, {}, Vec{1, 1, 1} * .999, REFR), // Glas
+           Refl::DIFF),                                                // Top
+    Sphere(16.5, {27, 16.5, 47}, {}, Vec{1, 1, 1} * .999, Refl::SPEC), // Mirr
+    Sphere(16.5, {73, 16.5, 78}, {}, Vec{1, 1, 1} * .999, Refl::REFR), // Glas
     Sphere(600, {50, 681.6 - .27, 81.6}, {12, 12, 12}, {},
-           DIFF) // Lite
+           Refl::DIFF) // Lite
 };
 inline double clamp(double x) { return x < 0 ? 0 : x > 1 ? 1 : x; }
 inline int toInt(double x) { return int(pow(clamp(x), 1 / 2.2) * 255 + .5); }
@@ -91,7 +92,7 @@ Vec radiance(const Ray &r, int depth, unsigned short *Xi) {
     return {};                     // if miss, return black
   const Sphere &obj = spheres[id]; // the hit object
   Vec x = r.o + r.d * t, n = (x - obj.position).norm(),
-      nl = n.dot(r.d) < 0 ? n : n * -1, f = obj.c;
+      nl = n.dot(r.d) < 0 ? n : n * -1, f = obj.color;
   double p = f.x > f.y && f.x > f.z ? f.x : f.y > f.z ? f.y : f.z; // max refl
   if (++depth > 5) {
     if (erand48(Xi) < p) {
@@ -100,13 +101,13 @@ Vec radiance(const Ray &r, int depth, unsigned short *Xi) {
       return obj.emission; // R.R.
     }
   }
-  if (obj.refl == DIFF) { // Ideal DIFFUSE reflection
+  if (obj.refl == Refl::DIFF) { // Ideal DIFFUSE reflection
     double r1 = 2 * M_PI * erand48(Xi), r2 = erand48(Xi), r2s = sqrt(r2);
     Vec w = nl, u = ((fabs(w.x) > .1 ? Vec{0, 1} : Vec{1}) % w).norm(),
         v = w % u;
     Vec d = (u * cos(r1) * r2s + v * sin(r1) * r2s + w * sqrt(1 - r2)).norm();
     return obj.emission + f.mult(radiance({x, d}, depth, Xi));
-  } else if (obj.refl == SPEC) // Ideal SPECULAR reflection
+  } else if (obj.refl == Refl::SPEC) // Ideal SPECULAR reflection
     return obj.emission +
            f.mult(radiance(Ray{x, r.d - n * 2 * n.dot(r.d)}, depth, Xi));
   Ray reflRay = {x, r.d - n * 2 * n.dot(r.d)}; // Ideal dielectric REFRACTION
