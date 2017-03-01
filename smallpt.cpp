@@ -1,7 +1,10 @@
 #include <math.h>   // smallpt, a Path Tracer by Kevin Beason, 2008
 #include <stdlib.h> // Make : g++ -O3 -fopenmp smallpt.cpp -o smallpt
 #include <stdio.h>  //        Remove "-fopenmp" for g++ version < 4.2
-struct Vec {        // Usage: time ./smallpt 5000 && xv image.ppm
+
+// Usage: time ./smallpt 5000 && xv image.ppm
+
+struct Vec {        
   double x, y, z;   // position, also color (r,g,b)
   Vec(double x_ = 0, double y_ = 0, double z_ = 0) {
     x = x_;
@@ -22,7 +25,7 @@ struct Vec {        // Usage: time ./smallpt 5000 && xv image.ppm
 };
 struct Ray {
   Vec o, d;
-  Ray(Vec o_, Vec d_) : o(o_), d(d_) {}
+Ray(Vec o_, Vec d_) : o(o_), d(d_) {}
 };
 enum Refl_t { DIFF, SPEC, REFR }; // material types, used in radiance()
 struct Sphere {
@@ -77,11 +80,13 @@ Vec radiance(const Ray &r, int depth, unsigned short *Xi) {
   Vec x = r.o + r.d * t, n = (x - obj.p).norm(),
       nl = n.dot(r.d) < 0 ? n : n * -1, f = obj.c;
   double p = f.x > f.y && f.x > f.z ? f.x : f.y > f.z ? f.y : f.z; // max refl
-  if (++depth > 5)
-    if (erand48(Xi) < p)
+  if (++depth > 5) {
+    if (erand48(Xi) < p) {
       f = f * (1 / p);
-    else
+    } else {
       return obj.e;       // R.R.
+    }
+  }
   if (obj.refl == DIFF) { // Ideal DIFFUSE reflection
     double r1 = 2 * M_PI * erand48(Xi), r2 = erand48(Xi), r2s = sqrt(r2);
     Vec w = nl, u = ((fabs(w.x) > .1 ? Vec(0, 1) : Vec(1)) % w).norm(),
