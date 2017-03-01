@@ -76,7 +76,7 @@ inline int toInt(double x) {
   return static_cast<int>(pow(clamp(x), 1 / 2.2) * 255 + .5);
 }
 
-inline std::pair<bool, Sphere*> intersect(const Ray &r, double &t) {
+inline std::pair<bool, Sphere *> intersect(const Ray &r, double &t) {
   double d;
   double inf = t = 1e20;
   Sphere *id;
@@ -91,7 +91,7 @@ inline std::pair<bool, Sphere*> intersect(const Ray &r, double &t) {
 
 Vec radiance(const Ray &r, int depth, unsigned short *Xi) {
   double t;   // distance to intersection
-  Sphere* id; // id of intersected object
+  Sphere *id; // id of intersected object
   bool intersected;
   std::tie(intersected, id) = intersect(r, t);
   if (!intersected) {
