@@ -1,5 +1,7 @@
+#include <algorithm>
 #include <array>
 #include <tuple>
+#include <vector>
 #include <math.h>   // smallpt, a Path Tracer by Kevin Beason, 2008
 #include <stdlib.h> // Make : g++ -O3 -fopenmp smallpt.cpp -o smallpt
 #include <stdio.h>  //        Remove "-fopenmp" for g++ version < 4.2
@@ -80,12 +82,12 @@ inline std::pair<bool, Sphere *> intersect(const Ray &r, double &t) {
   double d;
   double inf = t = 1e20;
   Sphere *id;
-  for (auto &s : spheres) {
+  std::for_each(spheres.rbegin(), spheres.rend(), [&](auto &s) {
     if ((d = s.intersect(r)) && d < t) {
       t = d;
       id = &s;
     }
-  }
+  });
   return std::make_pair(t < inf, id);
 }
 
@@ -126,19 +128,31 @@ Vec radiance(const Ray &r, int depth, unsigned short *Xi) {
     return obj.emission +
            f.mult(radiance({x, r.d - n * 2 * n.dot(r.d)}, depth, Xi));
   }
+
   Ray reflRay = {x, r.d - n * 2 * n.dot(r.d)}; // Ideal dielectric REFRACTION
   bool into = n.dot(nl) > 0;                   // Ray from outside going in?
-  double nc = 1, nt = 1.5, nnt = into ? nc / nt : nt / nc, ddn = r.d.dot(nl),
-         cos2t;
-  if ((cos2t = 1 - nnt * nnt * (1 - ddn * ddn)) <
-      0) // Total internal reflection
+  double nc = 1;
+  double nt = 1.5;
+  double nnt = into ? nc / nt : nt / nc;
+  double ddn = r.d.dot(nl);
+
+  double cos2t;
+  if ((cos2t = 1 - nnt * nnt * (1 - ddn * ddn)) < 0) {
+    // Total internal reflection
     return obj.emission + f.mult(radiance(reflRay, depth, Xi));
+  }
+
   Vec tdir =
       (r.d * nnt - n * ((into ? 1 : -1) * (ddn * nnt + sqrt(cos2t)))).norm();
-  double a = nt - nc, b = nt + nc, R0 = a * a / (b * b),
-         c = 1 - (into ? -ddn : tdir.dot(n));
-  double Re = R0 + (1 - R0) * c * c * c * c * c, Tr = 1 - Re, P = .25 + .5 * Re,
-         RP = Re / P, TP = Tr / (1 - P);
+  double a = nt - nc;
+  double b = nt + nc;
+  double R0 = a * a / (b * b);
+  double c = 1 - (into ? -ddn : tdir.dot(n));
+  double Re = R0 + (1 - R0) * c * c * c * c * c;
+  double Tr = 1 - Re;
+  double P = .25 + .5 * Re;
+  double RP = Re / P;
+  double TP = Tr / (1 - P);
   return obj.emission +
          f.mult(depth > 2
                     ? (erand48(Xi) < P ? // Russian roulette
@@ -150,8 +164,8 @@ Vec radiance(const Ray &r, int depth, unsigned short *Xi) {
 int main(int argc, char *argv[]) {
   int w = 1024, h = 768, samps = argc == 2 ? atoi(argv[1]) / 4 : 1; // # samples
   Ray cam{{50, 52, 295.6}, Vec{0, -0.042612, -1}.norm()}; // cam pos, dir
-  Vec cx = Vec{w * .5135 / h}, cy = (cx % cam.d).norm() * .5135, r,
-      *c = new Vec[w * h];
+  Vec cx = Vec{w * .5135 / h}, cy = (cx % cam.d).norm() * .5135, r;
+  std::vector<Vec> c(w * h);
 #pragma omp parallel for schedule(dynamic, 1) private(r) // OpenMP
   for (int y = 0; y < h; y++) {                          // Loop over image rows
     fprintf(stderr, "\rRendering (%d spp) %5.2f%%", samps * 4,
@@ -176,6 +190,7 @@ int main(int argc, char *argv[]) {
   }
   FILE *f = fopen("image.ppm", "w"); // Write image to PPM file.
   fprintf(f, "P3\n%d %d\n%d\n", w, h, 255);
-  for (int i = 0; i < w * h; i++)
-    fprintf(f, "%d %d %d ", toInt(c[i].x), toInt(c[i].y), toInt(c[i].z));
+  for (const auto &vec : c) {
+    fprintf(f, "%d %d %d ", toInt(vec.x), toInt(vec.y), toInt(vec.z));
+  }
 }
