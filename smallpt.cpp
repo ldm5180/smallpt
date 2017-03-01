@@ -18,16 +18,18 @@ struct Vec {
   double dot(const Vec &b) const {
     return x * b.x + y * b.y + z * b.z;
   }
-  // cross:
 
+  // cross:
   Vec operator%(Vec &b) const {
     return {y * b.z - z * b.y, z * b.x - x * b.z, x * b.y - y * b.x};
   }
 };
+
 struct Ray {
-  Vec o, d;
-Ray(Vec o_, Vec d_) : o(o_), d(d_) {}
+  Vec o;
+  Vec d;
 };
+
 enum Refl_t { DIFF, SPEC, REFR }; // material types, used in radiance()
 struct Sphere {
   double rad;  // radius
@@ -93,11 +95,11 @@ Vec radiance(const Ray &r, int depth, unsigned short *Xi) {
     Vec w = nl, u = ((fabs(w.x) > .1 ? Vec{0, 1} : Vec{1}) % w).norm(),
         v = w % u;
     Vec d = (u * cos(r1) * r2s + v * sin(r1) * r2s + w * sqrt(1 - r2)).norm();
-    return obj.e + f.mult(radiance(Ray(x, d), depth, Xi));
+    return obj.e + f.mult(radiance({x, d}, depth, Xi));
   } else if (obj.refl == SPEC) // Ideal SPECULAR reflection
     return obj.e +
-           f.mult(radiance(Ray(x, r.d - n * 2 * n.dot(r.d)), depth, Xi));
-  Ray reflRay(x, r.d - n * 2 * n.dot(r.d)); // Ideal dielectric REFRACTION
+        f.mult(radiance(Ray{x, r.d - n * 2 * n.dot(r.d)}, depth, Xi));
+  Ray reflRay = {x, r.d - n * 2 * n.dot(r.d)}; // Ideal dielectric REFRACTION
   bool into = n.dot(nl) > 0;                // Ray from outside going in?
   double nc = 1, nt = 1.5, nnt = into ? nc / nt : nt / nc, ddn = r.d.dot(nl),
          cos2t;
@@ -114,13 +116,13 @@ Vec radiance(const Ray &r, int depth, unsigned short *Xi) {
          f.mult(depth > 2
                     ? (erand48(Xi) < P ? // Russian roulette
                            radiance(reflRay, depth, Xi) * RP
-                                       : radiance(Ray(x, tdir), depth, Xi) * TP)
+                                       : radiance({x, tdir}, depth, Xi) * TP)
                     : radiance(reflRay, depth, Xi) * Re +
-                          radiance(Ray(x, tdir), depth, Xi) * Tr);
+                          radiance({x, tdir}, depth, Xi) * Tr);
 }
 int main(int argc, char *argv[]) {
   int w = 1024, h = 768, samps = argc == 2 ? atoi(argv[1]) / 4 : 1; // # samples
-  Ray cam({50, 52, 295.6}, Vec{0, -0.042612, -1}.norm()); // cam pos, dir
+  Ray cam{{50, 52, 295.6}, Vec{0, -0.042612, -1}.norm()}; // cam pos, dir
   Vec cx = Vec{w * .5135 / h}, cy = (cx % cam.d).norm() * .5135, r,
       *c = new Vec[w * h];
 #pragma omp parallel for schedule(dynamic, 1) private(r) // OpenMP
@@ -140,8 +142,7 @@ int main(int argc, char *argv[]) {
                    dy = r2 < 1 ? sqrt(r2) - 1 : 1 - sqrt(2 - r2);
             Vec d = cx * (((sx + .5 + dx) / 2 + x) / w - .5) +
                     cy * (((sy + .5 + dy) / 2 + y) / h - .5) + cam.d;
-            r = r +
-                radiance(Ray(cam.o + d * 140, d.norm()), 0, Xi) * (1. / samps);
+            r = r + radiance({cam.o + d * 140, d.norm()}, 0, Xi) * (1. / samps);
           } // Camera rays are pushed ^^^^^ forward to start in interior
           c[i] = c[i] + Vec{clamp(r.x), clamp(r.y), clamp(r.z)} * .25;
         }
