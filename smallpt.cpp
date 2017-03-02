@@ -170,22 +170,21 @@ Vec radiance(const Ray &r, int depth, unsigned short *Xi) {
 
   Ray reflRay = {x, r.d - n * 2 * n.dot(r.d)}; // Ideal dielectric REFRACTION
   bool into = n.dot(nl) > 0;                   // Ray from outside going in?
-  double nc = 1;
-  double nt = 1.5;
+  constexpr double nc = 1;
+  constexpr double nt = 1.5;
   double nnt = into ? nc / nt : nt / nc;
   double ddn = r.d.dot(nl);
 
-  double cos2t;
-  if ((cos2t = 1 - nnt * nnt * (1 - ddn * ddn)) < 0) {
-    // Total internal reflection
+  double cos2t = 1 - nnt * nnt * (1 - ddn * ddn);
+  if (cos2t < 0) { // Total internal reflection
     return obj.emission + f.mult(radiance(reflRay, depth, Xi));
   }
 
   Vec tdir =
       (r.d * nnt - n * ((into ? 1 : -1) * (ddn * nnt + sqrt(cos2t)))).norm();
-  double a = nt - nc;
-  double b = nt + nc;
-  double R0 = a * a / (b * b);
+  constexpr double a = nt - nc;
+  constexpr double b = nt + nc;
+  constexpr double R0 = a * a / (b * b);
   double c = 1 - (into ? -ddn : tdir.dot(n));
   double Re = R0 + (1 - R0) * c * c * c * c * c;
   double Tr = 1 - Re;
