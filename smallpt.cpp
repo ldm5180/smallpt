@@ -13,15 +13,23 @@ struct Vec {
   double y = 0.; // position, also color (g)
   double z = 0.; // position, also color (b)
 
-  Vec operator+(const Vec &b) const { return {x + b.x, y + b.y, z + b.z}; }
-  Vec operator-(const Vec &b) const { return {x - b.x, y - b.y, z - b.z}; }
-  Vec operator*(double b) const { return {x * b, y * b, z * b}; }
-  Vec mult(const Vec &b) const { return {x * b.x, y * b.y, z * b.z}; }
-  Vec &norm() { return *this = *this * (1 / sqrt(x * x + y * y + z * z)); }
+  constexpr Vec operator+(const Vec &b) const {
+    return {x + b.x, y + b.y, z + b.z};
+  }
+  constexpr Vec operator-(const Vec &b) const {
+    return {x - b.x, y - b.y, z - b.z};
+  }
+  constexpr Vec operator*(double b) const { return {x * b, y * b, z * b}; }
+  constexpr Vec mult(const Vec &b) const { return {x * b.x, y * b.y, z * b.z}; }
+  constexpr Vec &norm() {
+    return *this = *this * (1 / sqrt(x * x + y * y + z * z));
+  }
 
-  double dot(const Vec &b) const { return x * b.x + y * b.y + z * b.z; }
+  constexpr double dot(const Vec &b) const {
+    return x * b.x + y * b.y + z * b.z;
+  }
 
-  double greatestPosition() const {
+  constexpr double greatestPosition() const {
     if ((x > y) && (x > z)) {
       return x;
     }
@@ -32,7 +40,7 @@ struct Vec {
   }
 
   // cross:
-  Vec operator%(const Vec &b) const {
+  constexpr Vec operator%(const Vec &b) const {
     return {y * b.z - z * b.y, z * b.x - x * b.z, x * b.y - y * b.x};
   }
 };
@@ -141,6 +149,11 @@ double computeNnt(bool into, double nc, double nt) {
   return nt / nc;
 }
 
+Vec computeTdir(const Ray &r, double nnt, const Vec &n, bool into,
+                   double ddn, double cos2t) {
+  return (r.d * nnt - n * ((into ? 1 : -1) * (ddn * nnt + sqrt(cos2t)))).norm();
+}
+
 Vec radiance(const Ray &r, int depth, unsigned short *Xi) {
   double t;   // distance to intersection
   Sphere *id; // id of intersected object
@@ -188,8 +201,8 @@ Vec radiance(const Ray &r, int depth, unsigned short *Xi) {
     return obj.emission + f.mult(radiance(reflRay, depth, Xi));
   }
 
-  Vec tdir =
-      (r.d * nnt - n * ((into ? 1 : -1) * (ddn * nnt + sqrt(cos2t)))).norm();
+  Vec tdir = computeTdir(r, nnt, n, into, ddn, cos2t);
+
   constexpr double a = nt - nc;
   constexpr double b = nt + nc;
   constexpr double R0 = a * a / (b * b);
@@ -200,19 +213,21 @@ Vec radiance(const Ray &r, int depth, unsigned short *Xi) {
   double RP = Re / P;
   double TP = Tr / (1 - P);
   return obj.emission +
-         f.mult(depth > 2
-                    ? (erand48(Xi) < P ? // Russian roulette
-                           radiance(reflRay, depth, Xi) * RP
-                                       : radiance({x, tdir}, depth, Xi) * TP)
-                    : radiance(reflRay, depth, Xi) * Re +
-                          radiance({x, tdir}, depth, Xi) * Tr);
+         [&f, &Xi, &P, &reflRay, &depth, &RP, &x, &tdir, &TP, &Tr, &Re]() {
+           return f.mult(depth > 2 ? (erand48(Xi) < P
+                                          ? // Russian roulette
+                                          radiance(reflRay, depth, Xi) * RP
+                                          : radiance({x, tdir}, depth, Xi) * TP)
+                                   : radiance(reflRay, depth, Xi) * Re +
+                                         radiance({x, tdir}, depth, Xi) * Tr);
+         }();
 }
 int main(int argc, char *argv[]) {
   constexpr int width = 1024;
   constexpr int height = 768;
   int samples = argc == 2 ? atoi(argv[1]) / 4 : 1;        // # samples
   Ray camera{{50, 52, 295.6}, Vec{0, -0.042612, -1}.norm()}; // camera pos, dir
-  Vec cx = Vec{width * .5135 / height};
+  constexpr Vec cx = Vec{width * .5135 / height};
   Vec cy = (cx % camera.d).norm() * .5135;
   Vec r;
   std::vector<Vec> c(width * height);
