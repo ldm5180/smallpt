@@ -48,7 +48,7 @@ struct Sphere {
 
     constexpr double eps = 1e-4;
     auto b = op.dot(r.d);
-    autox det = b * b - op.dot(op) + radius * radius;
+    auto det = b * b - op.dot(op) + radius * radius;
 
     if (det < 0) {
       return 0;
@@ -76,7 +76,7 @@ inline int toInt(double x) {
   return static_cast<int>(pow(clamp(x), 1 / 2.2) * 255 + .5);
 }
 
-inline std::pair<bool, Sphere *> intersect(const Ray &r, double &t) {
+inline std::tuple<bool, Sphere *, double> intersect(const Ray &r) {
   static std::array<Sphere, 9> spheres = {{
       // Scene: radius, position, emission, color, material
       {1e5, {1e5 + 1, 40.8, 81.6}, {}, {.75, .25, .25}, Refl::DIFF},   // Left
@@ -90,23 +90,24 @@ inline std::pair<bool, Sphere *> intersect(const Ray &r, double &t) {
       {600, {50, 681.6 - .27, 81.6}, {12, 12, 12}, {}, Refl::DIFF}     // Lite
   }};
 
-  double d;
-  double inf = t = 1e20;
+  constexpr double inf = 1e20;
+  auto t = inf;
   Sphere *id;
   std::for_each(spheres.rbegin(), spheres.rend(), [&](auto &s) {
-    if ((d = s.intersect(r)) && d < t) {
+    auto d = s.intersect(r);
+    if (d && d < t) {
       t = d;
       id = &s;
     }
   });
-  return std::make_pair(t < inf, id);
+  return std::make_tuple(t < inf, id, t);
 }
 
 Vec radiance(const Ray &r, int depth, unsigned short *Xi) {
   double t;   // distance to intersection
   Sphere *id; // id of intersected object
   bool intersected;
-  std::tie(intersected, id) = intersect(r, t);
+  std::tie(intersected, id, t) = intersect(r);
   if (!intersected) {
     return {}; // if miss, return black
   }
