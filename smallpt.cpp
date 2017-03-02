@@ -41,36 +41,34 @@ struct Sphere {
   Vec color;
   Refl refl; // reflection type (DIFFuse, SPECular, REFRactive)
 
-  double intersect(const Ray &r) const { // returns distance, 0 if nohit
-    Vec op = position - r.o;             // Solve t^2*d.d + 2*t*(o-position).d +
-                                         // (o-position).(o-position)-R^2 = 0
-    double t;
-    double eps = 1e-4;
-    double b = op.dot(r.d);
-    double det = b * b - op.dot(op) + radius * radius;
+  double intersect(const Ray &r) const {
+    // returns distance, 0 if nohit Solve
+    // t^2*d.d + 2*t*(o-position).d + (o-position).(o-position)-R^2 = 0
+    auto op = position - r.o;       
+
+    constexpr double eps = 1e-4;
+    auto b = op.dot(r.d);
+    autox det = b * b - op.dot(op) + radius * radius;
 
     if (det < 0) {
       return 0;
-    } else {
-      det = sqrt(det);
     }
 
-    return (t = b - det) > eps ? t : ((t = b + det) > eps ? t : 0);
+    det = sqrt(det);
+
+    auto t = b - det;
+    if (t > eps) {
+      return t;
+    }
+
+    t = b + det;
+    if (t > eps) {
+      return det;
+    }
+
+    return 0;
   }
 };
-
-std::array<Sphere, 9> spheres = {{
-    // Scene: radius, position, emission, color, material
-    {1e5, {1e5 + 1, 40.8, 81.6}, {}, {.75, .25, .25}, Refl::DIFF},   // Left
-    {1e5, {-1e5 + 99, 40.8, 81.6}, {}, {.25, .25, .75}, Refl::DIFF}, // Rght
-    {1e5, {50, 40.8, 1e5}, {}, {.75, .75, .75}, Refl::DIFF},         // Back
-    {1e5, {50, 40.8, -1e5 + 170}, {}, {}, Refl::DIFF},               // Frnt
-    {1e5, {50, 1e5, 81.6}, {}, {.75, .75, .75}, Refl::DIFF},         // Botm
-    {1e5, {50, -1e5 + 81.6, 81.6}, {}, {.75, .75, .75}, Refl::DIFF}, // Top
-    {16.5, {27, 16.5, 47}, {}, Vec{1, 1, 1} * .999, Refl::SPEC},     // Mirr
-    {16.5, {73, 16.5, 78}, {}, Vec{1, 1, 1} * .999, Refl::REFR},     // Glas
-    {600, {50, 681.6 - .27, 81.6}, {12, 12, 12}, {}, Refl::DIFF}     // Lite
-}};
 
 inline double clamp(double x) { return x < 0 ? 0 : x > 1 ? 1 : x; }
 
@@ -79,6 +77,19 @@ inline int toInt(double x) {
 }
 
 inline std::pair<bool, Sphere *> intersect(const Ray &r, double &t) {
+  static std::array<Sphere, 9> spheres = {{
+      // Scene: radius, position, emission, color, material
+      {1e5, {1e5 + 1, 40.8, 81.6}, {}, {.75, .25, .25}, Refl::DIFF},   // Left
+      {1e5, {-1e5 + 99, 40.8, 81.6}, {}, {.25, .25, .75}, Refl::DIFF}, // Rght
+      {1e5, {50, 40.8, 1e5}, {}, {.75, .75, .75}, Refl::DIFF},         // Back
+      {1e5, {50, 40.8, -1e5 + 170}, {}, {}, Refl::DIFF},               // Frnt
+      {1e5, {50, 1e5, 81.6}, {}, {.75, .75, .75}, Refl::DIFF},         // Botm
+      {1e5, {50, -1e5 + 81.6, 81.6}, {}, {.75, .75, .75}, Refl::DIFF}, // Top
+      {16.5, {27, 16.5, 47}, {}, Vec{1, 1, 1} * .999, Refl::SPEC},     // Mirr
+      {16.5, {73, 16.5, 78}, {}, Vec{1, 1, 1} * .999, Refl::REFR},     // Glas
+      {600, {50, 681.6 - .27, 81.6}, {12, 12, 12}, {}, Refl::DIFF}     // Lite
+  }};
+
   double d;
   double inf = t = 1e20;
   Sphere *id;
