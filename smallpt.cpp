@@ -32,7 +32,7 @@ struct Vec {
   }
 
   // cross:
-  Vec operator%(Vec &b) const {
+  Vec operator%(const Vec &b) const {
     return {y * b.z - z * b.y, z * b.x - x * b.z, x * b.y - y * b.x};
   }
 };
@@ -128,10 +128,9 @@ Vec diffuseReflection(unsigned short *Xi, const Vec &nl, const Sphere &obj,
   double r1 = 2 * M_PI * erand48(Xi);
   double r2 = erand48(Xi);
   double r2s = sqrt(r2);
-  Vec w = nl;
-  Vec u = ((fabs(w.x) > .1 ? Vec{0, 1} : Vec{1}) % w).norm();
-  Vec v = w % u;
-  Vec d = (u * cos(r1) * r2s + v * sin(r1) * r2s + w * sqrt(1 - r2)).norm();
+  Vec u = ((fabs(nl.x) > .1 ? Vec{0, 1} : Vec{1}) % nl).norm();
+  Vec v = nl % u;
+  Vec d = (u * cos(r1) * r2s + v * sin(r1) * r2s + nl * sqrt(1 - r2)).norm();
   return obj.emission + f.mult(radiance({x, d}, depth, Xi));
 }
 
