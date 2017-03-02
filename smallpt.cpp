@@ -134,6 +134,13 @@ Vec diffuseReflection(unsigned short *Xi, const Vec &nl, const Sphere &obj,
   return obj.emission + f.mult(radiance({x, d}, depth, Xi));
 }
 
+double computeNnt(bool into, double nc, double nt) {
+  if (into) {
+    return nc / nt;
+  }
+  return nt / nc;
+}
+
 Vec radiance(const Ray &r, int depth, unsigned short *Xi) {
   double t;   // distance to intersection
   Sphere *id; // id of intersected object
@@ -172,7 +179,8 @@ Vec radiance(const Ray &r, int depth, unsigned short *Xi) {
   bool into = n.dot(nl) > 0;                   // Ray from outside going in?
   constexpr double nc = 1;
   constexpr double nt = 1.5;
-  double nnt = into ? nc / nt : nt / nc;
+  double nnt = computeNnt(into, nc, nt);
+
   double ddn = r.d.dot(nl);
 
   double cos2t = 1 - nnt * nnt * (1 - ddn * ddn);
