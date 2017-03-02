@@ -230,8 +230,8 @@ int main(int argc, char *argv[]) {
                    dy = r2 < 1 ? sqrt(r2) - 1 : 1 - sqrt(2 - r2);
             Vec d = cx * (((sx + .5 + dx) / 2 + x) / width - .5) +
                     cy * (((sy + .5 + dy) / 2 + y) / height - .5) + camera.d;
-            r = r +
-                radiance({camera.o + d * 140, d.norm()}, 0, Xi) * (1. / samples);
+            auto mult140 = camera.o + d * 140;
+            r = r + radiance({mult140, d.norm()}, 0, Xi) * (1. / samples);
           } // Camera rays are pushed ^^^^^ forward to start in interior
           c[i] = c[i] + Vec{clamp(r.x), clamp(r.y), clamp(r.z)} * .25;
         }
