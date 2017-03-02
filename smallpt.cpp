@@ -113,6 +113,15 @@ inline std::tuple<bool, Sphere *, double> intersect(const Ray &r) {
   return std::make_tuple(t < inf, id, t);
 }
 
+Vec createNl(const Vec &n, const Ray &r) {
+  return [&]() {
+    if (n.dot(r.d) < 0) {
+      return n;
+    }
+    return n * -1;
+  }();
+}
+
 Vec radiance(const Ray &r, int depth, unsigned short *Xi) {
   double t;   // distance to intersection
   Sphere *id; // id of intersected object
@@ -125,12 +134,13 @@ Vec radiance(const Ray &r, int depth, unsigned short *Xi) {
   const Sphere &obj = *id; // the hit object
   Vec x = r.o + r.d * t;
   Vec n = (x - obj.position).norm();
-  Vec nl = n.dot(r.d) < 0 ? n : n * -1;
+  Vec nl = createNl(n, r);
 
   auto position = obj.color.greatestPosition();
 
   Vec f = obj.color;
-  if (++depth > 5) {
+  ++depth;
+  if (depth > 5) {
     if (erand48(Xi) < position) {
       f = f * (1 / position);
     } else {
