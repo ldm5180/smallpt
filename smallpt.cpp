@@ -122,6 +122,20 @@ Vec createNl(const Vec &n, const Ray &r) {
   }();
 }
 
+Vec radiance(const Ray &r, int depth, unsigned short *Xi);
+
+Vec diffuseReflection(unsigned short *Xi, const Vec &nl, const Sphere &obj,
+                      const Vec &f, const Vec &x, const int &depth) {
+  double r1 = 2 * M_PI * erand48(Xi);
+  double r2 = erand48(Xi);
+  double r2s = sqrt(r2);
+  Vec w = nl;
+  Vec u = ((fabs(w.x) > .1 ? Vec{0, 1} : Vec{1}) % w).norm();
+  Vec v = w % u;
+  Vec d = (u * cos(r1) * r2s + v * sin(r1) * r2s + w * sqrt(1 - r2)).norm();
+  return obj.emission + f.mult(radiance({x, d}, depth, Xi));
+}
+
 Vec radiance(const Ray &r, int depth, unsigned short *Xi) {
   double t;   // distance to intersection
   Sphere *id; // id of intersected object
@@ -138,8 +152,9 @@ Vec radiance(const Ray &r, int depth, unsigned short *Xi) {
 
   auto position = obj.color.greatestPosition();
 
-  Vec f = obj.color;
   ++depth;
+
+  Vec f = obj.color;
   if (depth > 5) {
     if (erand48(Xi) < position) {
       f = f * (1 / position);
@@ -149,14 +164,7 @@ Vec radiance(const Ray &r, int depth, unsigned short *Xi) {
   }
 
   if (obj.refl == Refl::DIFF) { // Ideal DIFFUSE reflection
-    double r1 = 2 * M_PI * erand48(Xi);
-    double r2 = erand48(Xi);
-    double r2s = sqrt(r2);
-    Vec w = nl;
-    Vec u = ((fabs(w.x) > .1 ? Vec{0, 1} : Vec{1}) % w).norm();
-    Vec v = w % u;
-    Vec d = (u * cos(r1) * r2s + v * sin(r1) * r2s + w * sqrt(1 - r2)).norm();
-    return obj.emission + f.mult(radiance({x, d}, depth, Xi));
+    return diffuseReflection(Xi, nl, obj, f, x, depth);
   } else if (obj.refl == Refl::SPEC) { // Ideal SPECULAR reflection
     return obj.emission +
            f.mult(radiance({x, r.d - n * 2 * n.dot(r.d)}, depth, Xi));
