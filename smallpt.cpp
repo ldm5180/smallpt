@@ -21,6 +21,16 @@ struct Vec {
 
   double dot(const Vec &b) const { return x * b.x + y * b.y + z * b.z; }
 
+  double greatestPosition() const {
+    if ((x > y) && (x > z)) {
+      return x;
+    }
+    if (y > z) {
+      return y;
+    }
+    return z;
+  }
+
   // cross:
   Vec operator%(Vec &b) const {
     return {y * b.z - z * b.y, z * b.x - x * b.z, x * b.y - y * b.x};
@@ -116,12 +126,13 @@ Vec radiance(const Ray &r, int depth, unsigned short *Xi) {
   Vec x = r.o + r.d * t;
   Vec n = (x - obj.position).norm();
   Vec nl = n.dot(r.d) < 0 ? n : n * -1;
-  Vec f = obj.color;
-  double p = f.x > f.y && f.x > f.z ? f.x : f.y > f.z ? f.y : f.z; // max refl
 
+  auto position = obj.color.greatestPosition();
+
+  Vec f = obj.color;
   if (++depth > 5) {
-    if (erand48(Xi) < p) {
-      f = f * (1 / p);
+    if (erand48(Xi) < position) {
+      f = f * (1 / position);
     } else {
       return obj.emission; // R.R.
     }
