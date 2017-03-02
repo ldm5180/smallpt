@@ -63,7 +63,6 @@ struct Sphere {
     if (det < 0) {
       return 0;
     }
-
     det = sqrt(det);
 
     auto t = b - det;
@@ -73,7 +72,7 @@ struct Sphere {
 
     t = b + det;
     if (t > eps) {
-      return det;
+      return t;
     }
 
     return 0;
